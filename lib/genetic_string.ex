@@ -1,5 +1,5 @@
 defmodule GeneticString do
-  @target_phrase "Hello Elixir"
+  @target_phrase "Hello out there in here"
 
   def possible_characters() do
     Enum.to_list(?a..?z) ++
@@ -44,8 +44,9 @@ defmodule GeneticString do
 
   def select_parents([]), do: []
 
-  def select_parents(sorted_population) do
-    sorted_population
+  def select_parents(population) do
+    population
+    |> Enum.shuffle()
     |> Enum.take(2)
   end
 
@@ -97,7 +98,13 @@ defmodule GeneticString do
 
     rest_population = Enum.drop(sorted_population, elitism.count) |> Enum.shuffle()
 
-    [parent1, parent2] = select_parents(sorted_population)
+    possible_parents =
+      case length(elite_population) do
+        x when x < 2 -> elite_population ++ Enum.take(sorted_population, 2)
+        _ -> elite_population
+      end
+
+    [parent1, parent2] = select_parents(possible_parents)
     offspring = crossover(parent1, parent2) |> mutation()
 
     # Keep an elite-num of chromosome, and drop less fortunate chromomse before appending the offspring
@@ -118,9 +125,27 @@ defmodule GeneticString do
         evolve_mechanism(
           %{i: generation.i + 1, limit: generation.limit},
           %{population: new_population, size: population_data.size},
-          elitism,
+          adjust_elitism(elitism, generation, population_data.size),
+          # elitism,
           memoized_fitness
         )
     end
+  end
+
+  def adjust_elitism(elitism, generation, population_size) do
+    progress = generation.i / generation.limit
+
+    rate =
+      case progress do
+        # Promote better fits in earlier generations
+        x when x < 0.5 ->
+          max(elitism.rate - 0.05, 0.01)
+
+        # Promote more diversity in later generations
+        _ ->
+          min(elitism.rate + 0.01, 0.25)
+      end
+
+    %{rate: rate, count: floor(rate * population_size)}
   end
 end
