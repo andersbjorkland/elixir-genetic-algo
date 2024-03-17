@@ -1,5 +1,5 @@
 defmodule GeneticString do
-  @target_phrase "Hello out there in here"
+  @target_phrase "Hello Elixir"
 
   def possible_characters() do
     Enum.to_list(?a..?z) ++
